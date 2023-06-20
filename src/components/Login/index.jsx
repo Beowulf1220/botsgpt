@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Box, TextField, Button, Typography, Alert, Snackbar } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -8,7 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 
 
 
-import './Login.css';
+import './Register.css';
 
 const Container = styled(Box)(({ theme }) => ({
     display:'flex',
@@ -18,7 +17,7 @@ const Container = styled(Box)(({ theme }) => ({
     width: '50vw',
     justifyContent: 'center',
     borderRadius: '16px',
-    background: 'white',
+    background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
   }));
   
   const StyledInput = styled(TextField)({
@@ -31,13 +30,22 @@ const Container = styled(Box)(({ theme }) => ({
     marginBottom: '1rem',
   });
 
-  const LoginComponent = () => {
-    const [email, setEmail] = useState('');
+  const RegisterComponent = () => {
     const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
     const navigate = useNavigate();
 
+    const [open, setOpen] = React.useState(false);
 
-    const login = useGoogleLogin({
+    const handleClose = (event, reason) => {
+      if (reason === 'clickaway') {
+        return;
+      }
+      setOpen(false);
+    };
+
+
+    const registerGoogle = useGoogleLogin({
         onSuccess: tokenResponse => {
           const accessToken = tokenResponse.access_token;
           fetch('https://bot-panel-server-AdrianGutierr26.replit.app/google-login', {
@@ -61,8 +69,7 @@ const Container = styled(Box)(({ theme }) => ({
           .then(data => {
             //console.log(data.message);
             localStorage.setItem('token', data.token);
-            localStorage.setItem('email', data.email);
-            alert("Successfully logged in with Google!");
+            alert("Successfully registered with Google!");
             navigate('/create-bot');
           })
           .catch(error => {
@@ -71,34 +78,39 @@ const Container = styled(Box)(({ theme }) => ({
           });
         }
       });
-  
-    const handleLogin = async () => {
-        try {
-          const response = await fetch('https://bot-panel-server-AdrianGutierr26.replit.app/login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: email,
-              password: password,
-            }),
-          });
-      
-          if (response.ok) {
+
+      const isInputValid = () => {
+        return (email !== '' && password !== '');
+      }
+
+      const handleRegister = async () => {
+        if(isInputValid()){
+          try {
+            const response = await fetch('https://bot-panel-server-AdrianGutierr26.replit.app/set-password', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: email,
+                newPassword: password,
+              }),
+            });
+        
             const data = await response.json();
-            //console.log(data.token);
-            //console.log(data);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('email', data.email);
-            alert("Successfully logged in!");
-            navigate('/create-bot');
-          } else {
-            errorMessage("Invalid email or password");
+            if (response.ok) {
+              alert(data.message);
+              // Redirect the user to the login page or log them in automatically
+              navigate('/create-bot');
+            } else {
+              errorMessage(data.error);
+            }
+          } catch (error) {
+            console.log('Error:', error);
+            errorMessage(error.message);
           }
-        } catch (error) {
-          console.log('Error:', error);
-          errorMessage(error.message);
+        }else{
+          setOpen(true);
         }
       };
 
@@ -107,50 +119,43 @@ const Container = styled(Box)(({ theme }) => ({
     };
   
     return (
-        <div class="centerDiv">
-      <Container>
-        <Typography variant="h4" gutterBottom style={{marginTop: '5%', marginBottom: '3%'}}>
-          Login
-        </Typography>
-        <StyledInput
-          label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          variant="outlined"
-          style={{width:'40%'}}
-        />
-        <StyledInput
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          variant="outlined"
-          style={{width:'40%'}}
-        />
-        <StyledButton variant="contained" onClick={handleLogin} style={{width:'40%'}}>
-          Login with Email
-        </StyledButton>
-        <StyledButton onClick={() => login()}>
-            Sign in with Google 🚀{' '}
-        </StyledButton>
-        <StyledButton onClick={() => navigate('/set-password')} style={{marginTop: '-1%'}}>
-          Register
-        </StyledButton>
-        {/*  <GoogleLogin
-          clientId="51182961207-9bpvnf0jtua36lq9ue20lqkld0u2tpja.apps.googleusercontent.com"
-          buttonText="Login with Google"
-          onFailure={errorMessage}
-          cookiePolicy={'single_host_origin'}
-          responseType="id_token" // Add this line
-          onSuccess={credentialResponse => {
-            console.log(credentialResponse);
-          }}
-        />*/}
-       
-        
-      </Container>
+      <div class="centerDiv">
+        <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+          <Alert onClose={handleClose} severity="warning" sx={{ width: '100%' }}>
+            Missing email or password
+          </Alert>
+        </Snackbar>
+        <Container>
+          <Typography variant="h4" gutterBottom style={{marginTop: '5%', marginBottom: '3%'}}>
+            Register Now
+          </Typography>
+          <StyledInput
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            variant="outlined"
+            style={{width:'40%'}}
+          />
+          <StyledInput
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            variant="outlined"
+            style={{width:'40%'}}
+          />
+          <StyledButton variant="contained" onClick={handleRegister} style={{width:'40%'}}>
+            Sign up
+          </StyledButton>
+          <StyledButton onClick={() => registerGoogle()} >
+              Sign up with Google 🚀{' '}
+          </StyledButton>
+          <StyledButton onClick={() => navigate('/')} style={{marginTop: '-1%'}}>
+            Login
+          </StyledButton>        
+        </Container>
       </div>
     );
   };
 
-export default LoginComponent;
+export default RegisterComponent;
